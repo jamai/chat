@@ -1,0 +1,226 @@
+<!DOCTYPE HTML>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+
+    <title>在线聊天室</title>
+    <script type="text/javascript" src="http://libs.baidu.com/jquery/2.0.0/jquery.js"></script>
+    <script type="text/javascript" src="http://cdn.bootcss.com/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+
+    <script>
+
+        //定义初始化消息id
+        var msgid = 0;
+
+        //定义姓名
+        var chatName = $.cookie('chatName');
+
+        //定义ajax发送地址
+        var postURL = "chat.php";
+
+        //trim
+        function trim(str) {
+            return str.replace(/^\s+/i, "").replace(/\s+$/i, "");
+        }
+
+        //当用户第一次进入时，提示用户输入信息
+        if (chatName == '' || chatName == undefined) {
+            chatName = escape(trim(prompt("请输入您的昵称 (必须)\n", "Jamai")));
+            if (chatName == "") {
+                alert("严重错误:用户名不能为空");
+                window.location.reload();
+            }
+            $.cookie('chatName', chatName, {expires: 7});
+        }
+
+        /**
+         * 获取服务端数据
+         *
+         */
+        var getMsg = function (id, callback) {
+            $.ajax({
+                method: "POST",
+                url: postURL,
+                data: {action: 'get', chatname: chatName, id: id},
+                dataType: 'json',
+                success: function (rel) {
+                    if (rel.errCode == 100) {
+                        alert("严重错误:用户名不能为空");
+                    }
+                    else if (rel.init != 0) {
+                        callback.call(null, rel);
+                    }
+                }
+            });
+        };
+
+        /**
+         * 追加消息
+         * @param msg
+         *
+         *
+         * {
+         *    init: 1, nid: 100, pic: "",
+         *    name: "Hito", date: "2017-04-27 00:00:00", detail:"你好"
+         * }
+         */
+        var appendMsg = function (msg) {
+            if (!msg) {
+                return;
+            }
+
+            var name = msg.name;
+            var pic = 'http://k2.jsqq.net/uploads/allimg/1703/7_170309140801_7.jpg';
+            var date = msg.date;
+            var detail = msg.detail;
+
+            //更新全局消息id
+            msgid = msg.nid;
+
+            var content = document.createElement('div');
+            content.className = "msg";
+            content.innerHTML = '<img src="' + pic + '" title="' + name + '" alt="' + name + '" class="pic">' +
+                    '<span class="brf">' + name + ':&nbsp; ' + date + '</span>' +
+                    '<span class="detail">' + detail + '</span>';
+
+            if (msg.init == 1) {
+                //把返回内容插入消息框
+                $('#msg_box').append(content);
+
+                //自动滚动到最下
+                $('#msg_box').scrollTop($('#msg_box')[0].scrollHeight);
+            }
+        };
+
+        //自动获取消息
+        setInterval(function () {
+            getMsg(msgid, appendMsg);
+        }, 3000);
+
+        //定义发送消息函数
+        var send = function () {
+            var detail = $('textarea').val();
+            if (detail == "") {
+                return;
+            }
+
+            //发送消息后 清除当前文本框内容
+            $('textarea').val('');
+
+            $.ajax({
+                method: 'POST',
+                url: postURL,
+                data: {action: 'send', chatname: chatName, chatmsg: detail},
+                dataType: 'json',
+                success: function (rel) {
+                    if (rel.init == 0) {
+                        alert('发送消息错误,请重新发送!');
+                    }
+                }
+            });
+        }
+
+    </script>
+    <style>
+        .main {
+            width: 588px;
+            height: 512px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin: 50px auto;
+            background: #E8F4EF;
+            box-shadow: 0 0 50px #ccc
+        }
+
+        .title {
+            width: 100%;
+            margin: 10px;
+            height: 24px;
+            line-height: 24px
+        }
+
+        #msg_box {
+            width: 98%;
+            height: 310px;
+            padding: 5px 1%;
+            background: #ececec;
+            border-top: 1px solid #acacac;
+            border-bottom: 1px solid #acacac;
+            overflow-y: scroll;
+        }
+
+        #msg_box .msg {
+            margin: 10px 0;
+            float: left;
+            width: 100%
+        }
+
+        .msg .pic {
+            width: 35px;
+            height: 35px;
+            border-radius: 3px;
+            margin-right: 10px;
+            float: left
+        }
+
+        .msg .brf {
+            float: left;
+            width: 500px;
+            height: 35px
+        }
+
+        .msg .detail {
+            display: inline-block;
+            background: #E2E6ED;
+            border: 1px solid #D5E0E0;
+            border-radius: 5px;
+            box-shadow: 1px 1px 4px #D5E0E0;
+            line-height: 20px;
+            margin: -15px 0 0 45px;
+            padding: 10px
+        }
+
+        .enterbox {
+            width: 100%;
+            height: 120px;
+            background: #f3f3f3;
+        }
+
+        .enterbox textarea {
+            width: 98%;
+            height: 100px;
+            max-width: 98%;
+            max-height: 100px;
+            padding: 0 1%;
+            padding-top: 5px;
+            background: #f5f5f5;
+            border: none;
+            outline: none
+        }
+
+        .send {
+            width: 100px;
+            height: 25px;
+            background: #4CB177;
+            color: white;
+            line-height: 25px;
+            float: right;
+            margin-right: 10px;
+            margin-top: 5px;
+            text-align: center;
+            border-radius: 3px;
+            cursor: pointer
+        }
+    </style>
+</head>
+<body>
+<div class="main">
+    <div class="title">聊天室</div>
+    <div id="msg_box"></div>
+    <div class="enterbox">
+        <textarea autofocus="1"></textarea>
+        <div class="send" onclick="send()">发送</div>
+    </div>
+</div>
+</body>
+</html>
